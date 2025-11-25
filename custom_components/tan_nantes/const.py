@@ -11,3 +11,6 @@ URL_STOPS = "http://open.tan.fr/ewp/arrets.json/{}/{}"
 
 # URL for waiting time (CodeLieu)
 URL_WAITING_TIME = "http://open.tan.fr/ewp/tempsattente.json/{}"
+
+# URL for stop schedule (CodeArret/NumLigne/Sens)
+URL_STOP_SCHEDULE = "http://open.tan.fr/ewp/horairesarret.json/{}/{}/{}"

@@ -47,6 +47,30 @@ class TanDataCoordinator(DataUpdateCoordinator):
             data = await self.api.get_waiting_time(self.stop_code)
             if data is None:
                 raise UpdateFailed("Error fetching data from Tan API")
+            
+            # Enrich data with traffic info if needed
+            traffic_cache = {}
+            
+            for passage in data:
+                if passage.get("infotrafic"):
+                    line_num = passage.get("ligne", {}).get("numLigne")
+                    direction = passage.get("sens")
+                    stop_id = passage.get("arret", {}).get("codeArret")
+                    
+                    if line_num and direction and stop_id:
+                        key = f"{stop_id}-{line_num}-{direction}"
+                        if key not in traffic_cache:
+                            try:
+                                details = await self.api.get_stop_schedule(stop_id, line_num, direction)
+                                if details and "ligne" in details:
+                                    traffic_cache[key] = details["ligne"].get("libelleTrafic")
+                            except Exception:
+                                # Ignore errors for secondary calls to avoid failing the whole update
+                                pass
+                        
+                        if key in traffic_cache:
+                            passage["infotrafic_message"] = traffic_cache[key]
+
             return data
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
@@ -85,7 +109,8 @@ class TanSensor(SensorEntity):
                 "destination": passage.get("terminus"),
                 "time": passage.get("temps"),
                 "direction": passage.get("sens"),
-                "traffic_info": passage.get("infotrafic")
+                "traffic_info": passage.get("infotrafic"),
+                "traffic_message": passage.get("infotrafic_message")
             })
             
         return {

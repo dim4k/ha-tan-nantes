@@ -132,6 +132,7 @@ class TanNantesCard extends HTMLElement {
                     bus.time.includes("proche") ||
                     /(^|\D)1(mn|')/.test(bus.time);
                 const isTraffic = bus.traffic_info;
+                const trafficMessage = bus.traffic_message || "Info Trafic";
                 const icon = this._getIconForType(bus.type);
                 const color = this._getLineColor(bus.line);
 
@@ -145,7 +146,10 @@ class TanNantesCard extends HTMLElement {
             ${bus.destination}
             ${
                 isTraffic
-                    ? '<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="Info Trafic"></ha-icon>'
+                    ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${trafficMessage.replace(
+                          /"/g,
+                          "&quot;"
+                      )}"></ha-icon>`
                     : ""
             }
         </div>
@@ -160,19 +164,20 @@ class TanNantesCard extends HTMLElement {
 
     _getLineColor(line) {
         const colors = {
-            1: "#009e49",
-            2: "#e51c2d",
-            3: "#005da9",
-            4: "#c6a900",
-            5: "#005da9",
-            C1: "#9a3f97",
-            C2: "#9a3f97",
-            C3: "#9a3f97",
-            C4: "#9a3f97",
-            C6: "#9a3f97",
-            C7: "#9a3f97",
-            C9: "#9a3f97",
-            C20: "#9a3f97",
+            1: "#00A754",
+            2: "#E30612",
+            3: "#2481C3",
+            4: "#FDC600",
+            5: "#0BBBEF",
+            C1: "#0BBBEF",
+            C2: "#EE7402",
+            C3: "#F7A600",
+            C4: "#76B82A",
+            C6: "#A877B2",
+            C7: "#C8D300",
+            C8: "#C8D300",
+            C9: "#F5B5D3",
+            C20: "#FFED00",
             NA: "#2ecc71", // Navette Aéroport
         };
         return colors[line] || "var(--primary-color)";

@@ -2,7 +2,7 @@ import logging
 import aiohttp
 import async_timeout
 
-from .const import URL_STOPS, URL_WAITING_TIME
+from .const import URL_STOPS, URL_WAITING_TIME, URL_STOP_SCHEDULE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,6 +21,11 @@ class TanApiClient:
     async def get_waiting_time(self, stop_code: str) -> list:
         """Get waiting times for a specific stop."""
         url = URL_WAITING_TIME.format(stop_code)
+        return await self._api_wrapper(url)
+
+    async def get_stop_schedule(self, stop_id: str, line_num: str, direction: int) -> dict:
+        """Get schedule and details for a specific stop/line/direction."""
+        url = URL_STOP_SCHEDULE.format(stop_id, line_num, direction)
         return await self._api_wrapper(url)
 
     async def _api_wrapper(self, url: str) -> any:
