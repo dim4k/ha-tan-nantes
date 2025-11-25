@@ -152,7 +152,8 @@ class TanNantesCard extends HTMLElement {
             for (const key of sortedKeys) {
                 const data = schedules[key];
                 const line = data.ligne.numLigne;
-                const direction = data.ligne.direction;
+                const direction =
+                    data.direction_label || `Sens ${data.ligne.direction}`;
                 const color = this._getLineColor(line);
 
                 html += `
@@ -163,7 +164,6 @@ class TanNantesCard extends HTMLElement {
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px;">
                 `;
-
                 if (data.horaires) {
                     data.horaires.forEach((h) => {
                         html += `

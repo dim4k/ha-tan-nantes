@@ -77,7 +77,8 @@ class TanDataCoordinator(DataUpdateCoordinator):
                     except Exception:
                         pass
 
-            # Enrich data with traffic info from schedules
+            # Enrich data with traffic info from schedules and prepare for frontend
+            final_schedules = {}
             for passage in data:
                 if passage.get("infotrafic"):
                     stop_id = passage.get("arret", {}).get("codeArret")
@@ -92,11 +93,29 @@ class TanDataCoordinator(DataUpdateCoordinator):
                             msg = ", ".join([n.get("libelle") for n in sched.get("notes") if n.get("libelle")])
                         passage["infotrafic_message"] = msg
 
+            # Prepare schedules for frontend (filter empty and add direction label)
+            for key in needed_schedules:
+                if key in self._schedules:
+                    sched = self._schedules[key]
+                    # Skip lines without schedules (e.g. special shuttles NN, NO, NS)
+                    if not sched.get("horaires"):
+                        continue
+                        
+                    # Create a shallow copy to inject direction label
+                    sched_data = sched.copy()
+                    direction = key[2] # 1 or 2
+                    dir_key = f"directionSens{direction}"
+                    
+                    if "ligne" in sched_data and dir_key in sched_data["ligne"]:
+                        sched_data["direction_label"] = sched_data["ligne"][dir_key]
+                    else:
+                        sched_data["direction_label"] = f"Sens {direction}"
+                        
+                    final_schedules[f"{key[1]}-{key[2]}"] = sched_data
+
             return {
                 "passages": data,
-                "schedules": {
-                    f"{k[1]}-{k[2]}": v for k, v in self._schedules.items() if k in needed_schedules
-                }
+                "schedules": final_schedules
             }
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
