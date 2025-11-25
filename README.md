@@ -29,14 +29,14 @@ This integration includes a native **Custom Lovelace Card**, requiring no comple
 1.  Go to **Settings** > **Devices & Services**.
 2.  Click **Add Integration**.
 3.  Search for **Tan Nantes**.
-4.  Enter the **Latitude** and **Longitude** of your home (or desired location).
+4.  Enter the **Latitude** and **Longitude** of your home (or desired location, ie : 47.218 / -1.553)
 5.  The integration will find the nearest stop and create the entities.
 
 ## 📺 Dashboard Usage
 
-Since the integration automatically loads the necessary resources, you can immediately add the following card to your dashboard (Manual / YAML mode):
+To add the card to your dashboard, you can add it to your dashboard using the visual editor:
 
-```yaml
-type: custom:tan-nantes-card
-entity: sensor.tan_prochains_commerce_1
-# Replace "commerce_1" with the name of the stop found for your location
+1.  In your dashboard, click **'Edit Dashboard'**.
+2.  Click **'Add Card'** (or the '+' icon).
+3.  Search for and select the **'Tan Nantes'** card.
+4.  The card will appear with a sample entity ID (`sensor.tan_prochains_commerce`). In the code editor, **update the `entity:` field** with the name of the sensor created for your stop (e.g., `sensor.tan_prochains_gare_de_l_etat`).

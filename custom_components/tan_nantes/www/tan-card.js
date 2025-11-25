@@ -1,5 +1,12 @@
 class TanNantesCard extends HTMLElement {
-    // Default configuration definition
+    // 1. Default configuration definition (Stub)
+    // This allows pre-filling the YAML when adding the card via the UI
+    static getStubConfig() {
+        return {
+            entity: "sensor.tan_prochains_commerce", // An example entity
+        };
+    }
+
     setConfig(config) {
         if (!config.entity) {
             throw new Error("You must define an entity");
@@ -11,17 +18,14 @@ class TanNantesCard extends HTMLElement {
         const entityId = this.config.entity;
         const state = hass.states[entityId];
 
-        // If state hasn't changed, do not redraw (perf)
         if (!state || (this._state && this._state === state)) return;
         this._state = state;
 
-        // Retrieve attributes
         const attributes = state.attributes;
         const passages = attributes.prochains_passages || [];
 
-        // Create container if it doesn't exist
         if (!this.content) {
-            this.attachShadow({ mode: "open" }); // Shadow DOM to protect CSS
+            this.attachShadow({ mode: "open" });
             this.shadowRoot.innerHTML = `
         <style>
           :host { font-family: Roboto, sans-serif; }
@@ -50,15 +54,21 @@ class TanNantesCard extends HTMLElement {
         <ha-card>
           <div class="card-header">
             <ha-icon icon="mdi:bus-clock" class="icon"></ha-icon>
-            ${state.attributes.friendly_name || "Arrêt Tan"}
+            <span id="title">Arrêt Tan</span>
           </div>
           <div id="content"></div>
         </ha-card>
       `;
             this.content = this.shadowRoot.getElementById("content");
+            this.titleElement = this.shadowRoot.getElementById("title");
         }
 
-        // Dynamic HTML generation
+        // Update the title with the stop name (Friendly Name)
+        if (this.titleElement) {
+            this.titleElement.innerText =
+                state.attributes.friendly_name || "Arrêt Tan";
+        }
+
         let html = "";
 
         // Helper function to generate rows
@@ -69,6 +79,8 @@ class TanNantesCard extends HTMLElement {
 
             return busSens
                 .map((bus) => {
+                    const isWarning =
+                        bus.temps.includes("2mn") || bus.temps.includes("3mn");
                     const isUrgent =
                         bus.temps.includes("proche") ||
                         bus.temps.includes("1mn");
@@ -76,7 +88,9 @@ class TanNantesCard extends HTMLElement {
           <div class="row">
             <div class="badge">${bus.ligne}</div>
             <div class="dest">${bus.destination}</div>
-            <div class="time ${isUrgent ? "urgent" : ""}">${bus.temps}</div>
+            <div class="time ${
+                isUrgent ? "urgent" : isWarning ? "warning" : ""
+            }">${bus.temps}</div>
           </div>
         `;
                 })
@@ -89,16 +103,25 @@ class TanNantesCard extends HTMLElement {
             html += `<div class="direction-header">Direction 2</div>`;
             html += renderRows(2);
         } else {
-            html = `<div class="no-bus" style="text-align:center;">Chargement ou API indisponible...</div>`;
+            html = `<div class="no-bus" style="text-align:center;">Chargement...</div>`;
         }
 
         this.content.innerHTML = html;
     }
 
-    // Card size
     getCardSize() {
         return 3;
     }
 }
 
 customElements.define("tan-nantes-card", TanNantesCard);
+
+// 2. Registration in the card list (Picker)
+// This block makes the card appear in the "Add a card" menu
+window.customCards = window.customCards || [];
+window.customCards.push({
+    type: "tan-nantes-card",
+    name: "Tan Nantes",
+    preview: true, // Displays a visual preview in the list
+    description: "Displays upcoming departures (Bus/Tram) for a given stop.",
+});
