@@ -13,8 +13,13 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the sensors based on the config entry."""
-    stop_code = entry.data[CONF_STOP_CODE]
-    stop_name = entry.data[CONF_STOP_LABEL]
+    # Handle backward compatibility for existing entries
+    stop_code = entry.data.get(CONF_STOP_CODE) or entry.data.get("code_lieu")
+    stop_name = entry.data.get(CONF_STOP_LABEL) or entry.data.get("libelle")
+
+    if not stop_code:
+        _LOGGER.error("Stop code missing from configuration")
+        return
 
     # Coordinator to manage updates (every 60s)
     coordinator = TanDataCoordinator(hass, stop_code)
