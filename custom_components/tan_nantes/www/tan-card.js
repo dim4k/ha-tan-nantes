@@ -97,40 +97,61 @@ class TanNantesCard extends HTMLElement {
     }
 
     _renderRows(departures, direction) {
-        const busDirection = departures.filter(
-            (p) => p.direction === direction && p.time
-        );
-        if (busDirection.length === 0)
-            return `<div class="no-bus">Pas de départ</div>`;
+        const busDirection = departures.filter(p => p.direction === direction && p.time);
+        if (busDirection.length === 0) return `<div class="no-bus">Pas de départ</div>`;
 
-        return busDirection
-            .map((bus) => {
-                const isWarning = /(^|\D)[23](mn|')/.test(bus.time);
-                const isUrgent =
-                    bus.time.includes("proche") ||
-                    /(^|\D)1(mn|')/.test(bus.time);
-                const trafficIcon = bus.traffic_info
-                    ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${(
-                          bus.traffic_message || "Info trafic"
-                      ).replace(/"/g, "&quot;")}"></ha-icon>`
-                    : "";
+        // Group by Line + Destination
+        const groups = {};
+        busDirection.forEach(bus => {
+            const key = `${bus.line}-${bus.destination}`;
+            if (!groups[key]) {
+                groups[key] = { ...bus, times: [] };
+            }
+            groups[key].times.push(bus.time);
+        });
 
-                return `
+        // Convert to array and sort by first time
+        const sortedGroups = Object.values(groups).sort((a, b) => {
+            return this._parseTime(a.times[0]) - this._parseTime(b.times[0]);
+        });
+
+        return sortedGroups.map(group => {
+            const time1 = group.times[0];
+            const time2 = group.times[1]; // Only take the second one if exists
+
+            const isWarning = /(^|\D)[23](mn|')/.test(time1);
+            const isUrgent = time1.includes("proche") || /(^|\D)1(mn|')/.test(time1);
+            
+            const trafficIcon = group.traffic_info 
+                ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${(group.traffic_message || "Info trafic").replace(/"/g, "&quot;")}"></ha-icon>` 
+                : "";
+            
+            let timeHtml = `<div class="time ${isUrgent ? "urgent" : isWarning ? "warning" : ""}">${time1}</div>`;
+            if (time2) {
+                timeHtml += `<div class="time-secondary">${time2}</div>`;
+            }
+
+            return `
                 <div class="row">
-                    <ha-icon icon="${this._getIconForType(
-                        bus.type
-                    )}" class="mode-icon"></ha-icon>
-                    <div class="badge" style="background-color: ${this._getLineColor(
-                        bus.line
-                    )};" title="Ligne ${bus.line}">${bus.line}</div>
-                    <div class="dest">${bus.destination}${trafficIcon}</div>
-                    <div class="time ${
-                        isUrgent ? "urgent" : isWarning ? "warning" : ""
-                    }">${bus.time}</div>
+                    <ha-icon icon="${this._getIconForType(group.type)}" class="mode-icon"></ha-icon>
+                    <div class="badge" style="background-color: ${this._getLineColor(group.line)};" title="Ligne ${group.line}">${group.line}</div>
+                    <div class="dest">${group.destination}${trafficIcon}</div>
+                    <div class="times-container">
+                        ${timeHtml}
+                    </div>
                 </div>
             `;
-            })
-            .join("");
+        }).join("");
+    }
+
+    _parseTime(timeStr) {
+        if (!timeStr) return 9999;
+        if (timeStr.includes("proche")) return 0;
+        const match = timeStr.match(/(\d+)(mn|h)/);
+        if (!match) return 9999;
+        let val = parseInt(match[1]);
+        if (match[2] === 'h') val *= 60;
+        return val;
     }
 
     _renderSchedule(schedules) {
@@ -261,6 +282,8 @@ class TanNantesCard extends HTMLElement {
             .schedule-item { background: rgba(127,127,127, 0.1); padding: 4px; border-radius: 4px; text-align: center; font-size: 0.9em; }
             .schedule-hour { font-weight: bold; color: var(--primary-color); }
             .schedule-min { color: var(--secondary-text-color); }
+            .times-container { display: flex; align-items: center; }
+            .time-secondary { font-size: 0.9em; color: var(--secondary-text-color); margin-left: 8px; font-weight: normal; }
             ha-card { padding-bottom: 0; overflow: hidden; }
         `;
     }
