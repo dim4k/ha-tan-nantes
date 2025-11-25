@@ -211,7 +211,8 @@ class TanNantesCard extends HTMLElement {
                     bus.time.includes("proche") ||
                     /(^|\D)1(mn|')/.test(bus.time);
                 const isTraffic = bus.traffic_info;
-                const trafficMessage = bus.traffic_message || "Info Trafic";
+                const trafficMessage = bus.traffic_message;
+                const tooltip = trafficMessage || "Info trafic non disponible";
                 const icon = this._getIconForType(bus.type);
                 const color = this._getLineColor(bus.line);
 
@@ -225,7 +226,7 @@ class TanNantesCard extends HTMLElement {
             ${bus.destination}
             ${
                 isTraffic
-                    ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${trafficMessage.replace(
+                    ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${tooltip.replace(
                           /"/g,
                           "&quot;"
                       )}"></ha-icon>`

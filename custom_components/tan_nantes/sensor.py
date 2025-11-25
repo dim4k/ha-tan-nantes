@@ -86,7 +86,11 @@ class TanDataCoordinator(DataUpdateCoordinator):
                     key = (stop_id, line_num, direction)
                     
                     if key in self._schedules:
-                        passage["infotrafic_message"] = self._schedules[key].get("ligne", {}).get("libelleTrafic")
+                        sched = self._schedules[key]
+                        msg = sched.get("ligne", {}).get("libelleTrafic")
+                        if not msg and sched.get("notes"):
+                            msg = ", ".join([n.get("libelle") for n in sched.get("notes") if n.get("libelle")])
+                        passage["infotrafic_message"] = msg
 
             return {
                 "passages": data,
