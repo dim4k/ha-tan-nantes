@@ -88,7 +88,10 @@ class TanSensor(SensorEntity):
                 "traffic_info": passage.get("infotrafic")
             })
             
-        return {"next_departures": next_buses}
+        return {
+            "stop_code": self.coordinator.stop_code,
+            "next_departures": next_buses
+        }
 
     async def async_update(self):
         """Update via the coordinator."""

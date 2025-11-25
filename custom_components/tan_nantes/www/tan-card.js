@@ -49,7 +49,23 @@ class TanNantesCard extends HTMLElement {
           .warning { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; }
           .traffic-warning { color: #f39c12; margin-left: 5px; vertical-align: middle; }
           .no-bus { padding: 10px 16px; font-style: italic; color: var(--secondary-text-color); }
-          ha-card { padding-bottom: 10px; }
+          .card-footer { padding: 8px 16px; text-align: center; border-top: 1px solid var(--divider-color); }
+          .button {
+            display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--primary-color); font-weight: 500;
+            padding: 6px 12px; border-radius: 4px; transition: background 0.2s;
+          }
+          .button:hover { background-color: rgba(var(--rgb-primary-color), 0.1); }
+          .button ha-icon { margin-right: 6px; --mdc-icon-size: 18px; }
+          
+          @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          .pulse { animation: pulse 2s infinite; }
+          
+          ha-card { padding-bottom: 0; overflow: hidden; }
         </style>
         <ha-card>
           <div class="card-header">
@@ -69,10 +85,12 @@ class TanNantesCard extends HTMLElement {
                 state.attributes.friendly_name || "Arrêt Tan";
         }
 
-        this._render(state.attributes.next_departures || []);
+        this._render(state.attributes);
     }
 
-    _render(departures) {
+    _render(attributes) {
+        const departures = attributes.next_departures || [];
+        const stopCode = attributes.stop_code;
         let html = "";
 
         if (departures.length > 0) {
@@ -81,7 +99,18 @@ class TanNantesCard extends HTMLElement {
             html += `<div class="direction-header">Direction 2</div>`;
             html += this._renderRows(departures, 2);
         } else {
-            html = `<div class="no-bus" style="text-align:center;">Loading...</div>`;
+            html = `<div class="no-bus" style="text-align:center;">Aucun départ proche</div>`;
+        }
+
+        if (stopCode) {
+            html += `
+                <div class="card-footer">
+                    <a href="https://m.tan.fr/traffic/times/${stopCode}" target="_blank" class="button">
+                        <ha-icon icon="mdi:clock-outline"></ha-icon>
+                        Voir tous les horaires
+                    </a>
+                </div>
+            `;
         }
 
         this.content.innerHTML = html;
@@ -92,7 +121,7 @@ class TanNantesCard extends HTMLElement {
             (p) => p.direction === direction && p.time
         );
         if (busDirection.length === 0)
-            return `<div class="no-bus">No departure</div>`;
+            return `<div class="no-bus">Pas de départ</div>`;
 
         return busDirection
             .map((bus) => {
@@ -100,34 +129,67 @@ class TanNantesCard extends HTMLElement {
                 // Handles "mn" and "'" as per documentation
                 const isWarning = /(^|\D)[23](mn|')/.test(bus.time);
                 const isUrgent =
-                    bus.time.includes("proche") || /(^|\D)1(mn|')/.test(bus.time);
+                    bus.time.includes("proche") ||
+                    /(^|\D)1(mn|')/.test(bus.time);
                 const isTraffic = bus.traffic_info;
                 const icon = this._getIconForType(bus.type);
-                
+                const color = this._getLineColor(bus.line);
+
                 return `
       <div class="row">
         <ha-icon icon="${icon}" class="mode-icon"></ha-icon>
-        <div class="badge type-${bus.type}">${bus.line}</div>
+        <div class="badge" style="background-color: ${color};" title="Ligne ${
+                    bus.line
+                }">${bus.line}</div>
         <div class="dest">
             ${bus.destination}
-            ${isTraffic ? '<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="Info Trafic"></ha-icon>' : ''}
+            ${
+                isTraffic
+                    ? '<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="Info Trafic"></ha-icon>'
+                    : ""
+            }
         </div>
-        <div class="time ${isUrgent ? "urgent" : isWarning ? "warning" : ""}">${
-                    bus.time
-                }</div>
+        <div class="time ${
+            isUrgent ? "urgent pulse" : isWarning ? "warning" : ""
+        }">${bus.time}</div>
       </div>
     `;
             })
             .join("");
     }
 
+    _getLineColor(line) {
+        const colors = {
+            1: "#009e49",
+            2: "#e51c2d",
+            3: "#005da9",
+            4: "#c6a900",
+            5: "#005da9",
+            C1: "#9a3f97",
+            C2: "#9a3f97",
+            C3: "#9a3f97",
+            C4: "#9a3f97",
+            C6: "#9a3f97",
+            C7: "#9a3f97",
+            C9: "#9a3f97",
+            C20: "#9a3f97",
+            NA: "#2ecc71", // Navette Aéroport
+        };
+        return colors[line] || "var(--primary-color)";
+    }
+
     _getIconForType(type) {
         switch (type) {
-            case 1: return "mdi:tram";
-            case 2: return "mdi:bus-articulated-front"; // Busway
-            case 3: return "mdi:bus";
-            case 4: return "mdi:ferry"; // Navibus
-            default: return "mdi:bus";
+            case 1:
+                return "mdi:tram";
+            case 2:
+                return "mdi:bus-articulated-front"; // Busway
+            case 3:
+                return "mdi:bus";
+            case 4:
+                return "mdi:ferry"; // Navibus
+            default:
+                return "mdi:bus";
         }
     }
 
