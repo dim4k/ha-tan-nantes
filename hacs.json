@@ -1,0 +1,9 @@
+{
+  "name": "Tan Nantes - Prochains Bus",
+  "render_readme": true,
+  "content_in_root": false,
+  "filename": "tan_nantes.zip",
+  "homeassistant": "2024.1.0",
+  "country": "FR",
+  "iot_class": "cloud_polling"
+}

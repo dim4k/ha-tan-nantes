@@ -1,0 +1,11 @@
+{
+  "domain": "tan_nantes",
+  "name": "Tan Nantes - Prochains Bus",
+  "codeowners": ["@votre_pseudo_github"],
+  "config_flow": true,
+  "documentation": "https://github.com/votre_pseudo/tan_nantes",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/votre_pseudo/tan_nantes/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
