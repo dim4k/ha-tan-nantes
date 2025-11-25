@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 import logging
 import async_timeout
 
@@ -40,6 +40,8 @@ class TanDataCoordinator(DataUpdateCoordinator):
         )
         self.stop_code = stop_code
         self.api = TanApiClient(async_get_clientsession(hass))
+        self._schedules = {}
+        self._last_schedule_date = None
 
     async def _async_update_data(self):
         """Retrieve data from the Tan API."""
@@ -48,30 +50,50 @@ class TanDataCoordinator(DataUpdateCoordinator):
             if data is None:
                 raise UpdateFailed("Error fetching data from Tan API")
             
-            # Enrich data with traffic info if needed
-            traffic_cache = {}
+            # Manage schedules cache (clear daily)
+            now = datetime.now()
+            if self._last_schedule_date != now.date():
+                self._schedules = {}
+                self._last_schedule_date = now.date()
+
+            needed_schedules = set()
             
+            # Identify needed schedules
+            for passage in data:
+                stop_id = passage.get("arret", {}).get("codeArret")
+                line_num = passage.get("ligne", {}).get("numLigne")
+                direction = passage.get("sens")
+                
+                if stop_id and line_num and direction:
+                    needed_schedules.add((stop_id, line_num, direction))
+
+            # Fetch missing schedules
+            for key in needed_schedules:
+                if key not in self._schedules:
+                    try:
+                        sched = await self.api.get_stop_schedule(*key)
+                        if sched:
+                            self._schedules[key] = sched
+                    except Exception:
+                        pass
+
+            # Enrich data with traffic info from schedules
             for passage in data:
                 if passage.get("infotrafic"):
+                    stop_id = passage.get("arret", {}).get("codeArret")
                     line_num = passage.get("ligne", {}).get("numLigne")
                     direction = passage.get("sens")
-                    stop_id = passage.get("arret", {}).get("codeArret")
+                    key = (stop_id, line_num, direction)
                     
-                    if line_num and direction and stop_id:
-                        key = f"{stop_id}-{line_num}-{direction}"
-                        if key not in traffic_cache:
-                            try:
-                                details = await self.api.get_stop_schedule(stop_id, line_num, direction)
-                                if details and "ligne" in details:
-                                    traffic_cache[key] = details["ligne"].get("libelleTrafic")
-                            except Exception:
-                                # Ignore errors for secondary calls to avoid failing the whole update
-                                pass
-                        
-                        if key in traffic_cache:
-                            passage["infotrafic_message"] = traffic_cache[key]
+                    if key in self._schedules:
+                        passage["infotrafic_message"] = self._schedules[key].get("ligne", {}).get("libelleTrafic")
 
-            return data
+            return {
+                "passages": data,
+                "schedules": {
+                    f"{k[1]}-{k[2]}": v for k, v in self._schedules.items() if k in needed_schedules
+                }
+            }
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
 
@@ -89,8 +111,10 @@ class TanSensor(SensorEntity):
     def native_value(self):
         """Return the time of the very first bus."""
         data = self.coordinator.data
-        if data and isinstance(data, list) and len(data) > 0:
-            return data[0].get("temps", "Indisponible")
+        passages = data.get("passages", []) if data else []
+        
+        if passages and isinstance(passages, list) and len(passages) > 0:
+            return passages[0].get("temps", "Indisponible")
         return "No bus"
 
     @property
@@ -100,8 +124,11 @@ class TanSensor(SensorEntity):
         if not data:
             return {}
         
+        passages = data.get("passages", [])
+        schedules = data.get("schedules", {})
+        
         next_buses = []
-        for passage in data:
+        for passage in passages:
             line_info = passage.get("ligne", {})
             next_buses.append({
                 "line": line_info.get("numLigne"),
@@ -115,7 +142,8 @@ class TanSensor(SensorEntity):
             
         return {
             "stop_code": self.coordinator.stop_code,
-            "next_departures": next_buses
+            "next_departures": next_buses,
+            "schedules": schedules
         }
 
     async def async_update(self):

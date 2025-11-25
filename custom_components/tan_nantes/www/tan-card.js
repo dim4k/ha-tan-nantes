@@ -91,6 +91,12 @@ class TanNantesCard extends HTMLElement {
     _render(attributes) {
         const departures = attributes.next_departures || [];
         const stopCode = attributes.stop_code;
+
+        if (this._showSchedule) {
+            this._renderSchedule(attributes);
+            return;
+        }
+
         let html = "";
 
         if (departures.length > 0) {
@@ -105,15 +111,88 @@ class TanNantesCard extends HTMLElement {
         if (stopCode) {
             html += `
                 <div class="card-footer">
-                    <a href="https://m.tan.fr/traffic/times/${stopCode}" target="_blank" class="button">
+                    <div class="button" id="schedule-btn" style="cursor: pointer;">
                         <ha-icon icon="mdi:clock-outline"></ha-icon>
                         Voir tous les horaires
-                    </a>
+                    </div>
                 </div>
             `;
         }
 
         this.content.innerHTML = html;
+
+        const btn = this.content.querySelector("#schedule-btn");
+        if (btn) {
+            btn.addEventListener("click", () => {
+                this._showSchedule = true;
+                this._render(attributes);
+            });
+        }
+    }
+
+    _renderSchedule(attributes) {
+        const schedules = attributes.schedules || {};
+        let html = `
+            <div class="card-header" style="border-bottom: 1px solid var(--divider-color); padding-bottom: 10px; margin-bottom: 10px;">
+                <ha-icon icon="mdi:arrow-left" class="icon" id="back-btn" style="cursor:pointer; margin-right:10px;"></ha-icon>
+                <span>Horaires</span>
+            </div>
+            <div style="padding: 0 16px 16px; max-height: 400px; overflow-y: auto;">
+        `;
+
+        if (Object.keys(schedules).length === 0) {
+            html += `<div class="no-bus">Chargement des horaires...</div>`;
+        } else {
+            const sortedKeys = Object.keys(schedules).sort((a, b) => {
+                const lineA = schedules[a].ligne.numLigne;
+                const lineB = schedules[b].ligne.numLigne;
+                return lineA.localeCompare(lineB, undefined, { numeric: true });
+            });
+
+            for (const key of sortedKeys) {
+                const data = schedules[key];
+                const line = data.ligne.numLigne;
+                const direction = data.ligne.direction;
+                const color = this._getLineColor(line);
+
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <div style="display:flex; align-items:center; margin-bottom:8px; border-bottom: 1px solid rgba(127,127,127,0.1); padding-bottom: 4px;">
+                            <div class="badge" style="background-color: ${color}; margin-right: 10px;">${line}</div>
+                            <div style="font-weight:500; font-size: 1.1em;">Vers ${direction}</div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px;">
+                `;
+
+                if (data.horaires) {
+                    data.horaires.forEach((h) => {
+                        html += `
+                            <div style="background: rgba(127,127,127, 0.1); padding: 4px; border-radius: 4px; text-align: center; font-size: 0.9em;">
+                                <div style="font-weight: bold; color: var(--primary-color);">${
+                                    h.heure
+                                }</div>
+                                <div style="color: var(--secondary-text-color);">${h.passages.join(
+                                    " "
+                                )}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div></div>`;
+            }
+        }
+
+        html += `</div>`;
+        this.content.innerHTML = html;
+
+        const backBtn = this.content.querySelector("#back-btn");
+        if (backBtn) {
+            backBtn.addEventListener("click", () => {
+                this._showSchedule = false;
+                this._render(attributes);
+            });
+        }
     }
 
     _renderRows(departures, direction) {
