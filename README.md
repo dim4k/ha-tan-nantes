@@ -19,7 +19,7 @@ This integration includes a native **Custom Lovelace Card**, requiring no comple
 
 1.  Open HACS in Home Assistant.
 2.  Go to **Integrations** > Menu (3 dots) > **Custom repositories**.
-3.  Add the URL of this repository: `https://github.com/dim4k/tan_nantes`.
+3.  Add the URL of this repository: `https://github.com/dim4k/ha-tan-nantes`.
 4.  Category: **Integration**.
 5.  Click **Download**.
 6.  **Restart Home Assistant**.
