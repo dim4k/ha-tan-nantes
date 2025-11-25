@@ -8,10 +8,10 @@ This integration includes a native **Custom Lovelace Card**, requiring no comple
 
 ## ✨ Features
 
-* **📍 Auto-detection:** Enter your GPS coordinates, and the integration automatically finds the nearest stop via the Tan API.
-* **⏱️ Real-time:** Displays real waiting times (API `tempsattente.json`).
-* **🎨 Included Card:** A visual Custom Card is automatically installed to display line badges and directions properly.
-* **🔔 Sensors:** Creates `sensor` entities that you can use in your own automations.
+-   **📍 Auto-detection:** Enter your GPS coordinates, and the integration automatically finds the nearest stop via the Tan API.
+-   **⏱️ Real-time:** Displays real waiting times (API `tempsattente.json`).
+-   **🎨 Included Card:** A visual Custom Card is automatically installed to display line badges and directions properly.
+-   **🔔 Sensors:** Creates `sensor` entities that you can use in your own automations.
 
 ## 📥 Installation
 
@@ -39,4 +39,4 @@ To add the card to your dashboard, you can add it to your dashboard using the vi
 1.  In your dashboard, click **'Edit Dashboard'**.
 2.  Click **'Add Card'** (or the '+' icon).
 3.  Search for and select the **'Tan Nantes'** card.
-4.  The card will appear with a sample entity ID (`sensor.tan_prochains_commerce`). In the code editor, **update the `entity:` field** with the name of the sensor created for your stop (e.g., `sensor.tan_prochains_gare_de_l_etat`).
+4.  The card will appear with a sample entity ID (`sensor.tan_next_commerce`). In the code editor, **update the `entity:` field** with the name of the sensor created for your stop (e.g., `sensor.tan_next_gare_de_l_etat`).

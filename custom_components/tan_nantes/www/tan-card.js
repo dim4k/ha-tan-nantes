@@ -3,7 +3,7 @@ class TanNantesCard extends HTMLElement {
     // This allows pre-filling the YAML when adding the card via the UI
     static getStubConfig() {
         return {
-            entity: "sensor.tan_prochains_commerce", // An example entity
+            entity: "sensor.tan_next_commerce", // An example entity
         };
     }
 
@@ -22,7 +22,7 @@ class TanNantesCard extends HTMLElement {
         this._state = state;
 
         const attributes = state.attributes;
-        const passages = attributes.prochains_passages || [];
+        const departures = attributes.next_departures || [];
 
         if (!this.content) {
             this.attachShadow({ mode: "open" });
@@ -73,38 +73,39 @@ class TanNantesCard extends HTMLElement {
         let html = "";
 
         // Helper function to generate rows
-        const renderRows = (sens) => {
-            const busSens = passages.filter((p) => p.sens === sens && p.temps);
-            if (busSens.length === 0)
-                return `<div class="no-bus">Aucun passage</div>`;
+        const renderRows = (direction) => {
+            const busDirection = departures.filter(
+                (p) => p.direction === direction && p.time
+            );
+            if (busDirection.length === 0)
+                return `<div class="no-bus">No departure</div>`;
 
-            return busSens
+            return busDirection
                 .map((bus) => {
                     const isWarning =
-                        bus.temps.includes("2mn") || bus.temps.includes("3mn");
+                        bus.time.includes("2mn") || bus.time.includes("3mn");
                     const isUrgent =
-                        bus.temps.includes("proche") ||
-                        bus.temps.includes("1mn");
+                        bus.time.includes("proche") || bus.time.includes("1mn");
                     return `
           <div class="row">
-            <div class="badge">${bus.ligne}</div>
+            <div class="badge">${bus.line}</div>
             <div class="dest">${bus.destination}</div>
             <div class="time ${
                 isUrgent ? "urgent" : isWarning ? "warning" : ""
-            }">${bus.temps}</div>
+            }">${bus.time}</div>
           </div>
         `;
                 })
                 .join("");
         };
 
-        if (passages.length > 0) {
+        if (departures.length > 0) {
             html += `<div class="direction-header">Direction 1</div>`;
             html += renderRows(1);
             html += `<div class="direction-header">Direction 2</div>`;
             html += renderRows(2);
         } else {
-            html = `<div class="no-bus" style="text-align:center;">Chargement...</div>`;
+            html = `<div class="no-bus" style="text-align:center;">Loading...</div>`;
         }
 
         this.content.innerHTML = html;

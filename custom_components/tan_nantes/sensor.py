@@ -6,17 +6,17 @@ import async_timeout
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, URL_TEMPS_ATTENTE
+from .const import DOMAIN, URL_WAITING_TIME
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the sensors based on the config entry."""
-    code_lieu = entry.data["code_lieu"]
-    stop_name = entry.data["libelle"]
+    stop_code = entry.data["stop_code"]
+    stop_name = entry.data["stop_label"]
 
     # Coordinator to manage updates (every 60s)
-    coordinator = TanDataCoordinator(hass, code_lieu)
+    coordinator = TanDataCoordinator(hass, stop_code)
     await coordinator.async_config_entry_first_refresh()
 
     # Create a main sensor
@@ -25,18 +25,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class TanDataCoordinator(DataUpdateCoordinator):
     """Manage API data retrieval."""
 
-    def __init__(self, hass, code_lieu):
+    def __init__(self, hass, stop_code):
         super().__init__(
             hass,
             _LOGGER,
             name="Tan API",
             update_interval=timedelta(seconds=60),
         )
-        self.code_lieu = code_lieu
+        self.stop_code = stop_code
 
     async def _async_update_data(self):
         """Retrieve data from the Tan API."""
-        url = URL_TEMPS_ATTENTE.format(self.code_lieu)
+        url = URL_WAITING_TIME.format(self.stop_code)
         
         async with async_timeout.timeout(10):
             async with aiohttp.ClientSession() as session:
@@ -51,8 +51,8 @@ class TanSensor(SensorEntity):
     def __init__(self, coordinator, stop_name):
         self.coordinator = coordinator
         self._stop_name = stop_name
-        self._attr_unique_id = f"tan_{coordinator.code_lieu}_next"
-        self._attr_name = f"Tan Prochains - {stop_name}"
+        self._attr_unique_id = f"tan_{coordinator.stop_code}_next"
+        self._attr_name = f"Tan Next - {stop_name}"
         self._attr_icon = "mdi:bus-clock"
 
     @property
@@ -61,7 +61,7 @@ class TanSensor(SensorEntity):
         data = self.coordinator.data
         if data and isinstance(data, list) and len(data) > 0:
             return data[0].get("temps", "Indisponible")
-        return "Pas de bus"
+        return "No bus"
 
     @property
     def extra_state_attributes(self):
@@ -72,15 +72,15 @@ class TanSensor(SensorEntity):
         
         next_buses = []
         for passage in data:
-            ligne_info = passage.get("ligne", {})
+            line_info = passage.get("ligne", {})
             next_buses.append({
-                "ligne": ligne_info.get("numLigne"),
+                "line": line_info.get("numLigne"),
                 "destination": passage.get("terminus"),
-                "temps": passage.get("temps"),
-                "sens": passage.get("sens")
+                "time": passage.get("temps"),
+                "direction": passage.get("sens")
             })
             
-        return {"prochains_passages": next_buses}
+        return {"next_departures": next_buses}
 
     async def async_update(self):
         """Update via the coordinator."""
