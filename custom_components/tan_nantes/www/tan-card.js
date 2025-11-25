@@ -97,12 +97,15 @@ class TanNantesCard extends HTMLElement {
     }
 
     _renderRows(departures, direction) {
-        const busDirection = departures.filter(p => p.direction === direction && p.time);
-        if (busDirection.length === 0) return `<div class="no-bus">Pas de départ</div>`;
+        const busDirection = departures.filter(
+            (p) => p.direction === direction && p.time
+        );
+        if (busDirection.length === 0)
+            return `<div class="no-bus">Pas de départ</div>`;
 
         // Group by Line + Destination
         const groups = {};
-        busDirection.forEach(bus => {
+        busDirection.forEach((bus) => {
             const key = `${bus.line}-${bus.destination}`;
             if (!groups[key]) {
                 groups[key] = { ...bus, times: [] };
@@ -115,33 +118,44 @@ class TanNantesCard extends HTMLElement {
             return this._parseTime(a.times[0]) - this._parseTime(b.times[0]);
         });
 
-        return sortedGroups.map(group => {
-            const time1 = group.times[0];
-            const time2 = group.times[1]; // Only take the second one if exists
+        return sortedGroups
+            .map((group) => {
+                const time1 = group.times[0];
+                const time2 = group.times[1]; // Only take the second one if exists
 
-            const isWarning = /(^|\D)[23](mn|')/.test(time1);
-            const isUrgent = time1.includes("proche") || /(^|\D)1(mn|')/.test(time1);
-            
-            const trafficIcon = group.traffic_info 
-                ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${(group.traffic_message || "Info trafic").replace(/"/g, "&quot;")}"></ha-icon>` 
-                : "";
-            
-            let timeHtml = `<div class="time ${isUrgent ? "urgent" : isWarning ? "warning" : ""}">${time1}</div>`;
-            if (time2) {
-                timeHtml += `<div class="time-secondary">${time2}</div>`;
-            }
+                const isWarning = /(^|\D)[23](mn|')/.test(time1);
+                const isUrgent =
+                    time1.includes("proche") || /(^|\D)1(mn|')/.test(time1);
 
-            return `
+                const trafficIcon = group.traffic_info
+                    ? `<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="${(
+                          group.traffic_message || "Info trafic"
+                      ).replace(/"/g, "&quot;")}"></ha-icon>`
+                    : "";
+
+                let timeHtml = `<div class="time ${
+                    isUrgent ? "urgent" : isWarning ? "warning" : ""
+                }">${time1}</div>`;
+                if (time2) {
+                    timeHtml += `<div class="time-secondary">${time2}</div>`;
+                }
+
+                return `
                 <div class="row">
-                    <ha-icon icon="${this._getIconForType(group.type)}" class="mode-icon"></ha-icon>
-                    <div class="badge" style="background-color: ${this._getLineColor(group.line)};" title="Ligne ${group.line}">${group.line}</div>
+                    <ha-icon icon="${this._getIconForType(
+                        group.type
+                    )}" class="mode-icon"></ha-icon>
+                    <div class="badge" style="background-color: ${this._getLineColor(
+                        group.line
+                    )};" title="Ligne ${group.line}">${group.line}</div>
                     <div class="dest">${group.destination}${trafficIcon}</div>
                     <div class="times-container">
                         ${timeHtml}
                     </div>
                 </div>
             `;
-        }).join("");
+            })
+            .join("");
     }
 
     _parseTime(timeStr) {
@@ -150,7 +164,7 @@ class TanNantesCard extends HTMLElement {
         const match = timeStr.match(/(\d+)(mn|h)/);
         if (!match) return 9999;
         let val = parseInt(match[1]);
-        if (match[2] === 'h') val *= 60;
+        if (match[2] === "h") val *= 60;
         return val;
     }
 
