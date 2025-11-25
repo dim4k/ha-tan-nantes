@@ -33,10 +33,11 @@ class TanApiClient:
         try:
             async with async_timeout.timeout(10):
                 async with self._session.get(url) as response:
-                    if response.status != 200:
-                        _LOGGER.error("Error fetching data from %s: %s", url, response.status)
-                        return None
+                    response.raise_for_status()
                     return await response.json()
+        except aiohttp.ClientError as exception:
+            _LOGGER.error("Error fetching data from %s: %s", url, exception)
+            return None
         except Exception as exception:
-            _LOGGER.error("Error connecting to Tan API: %s", exception)
-            raise
+            _LOGGER.error("Unexpected error connecting to Tan API: %s", exception)
+            return None

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta, datetime
 import logging
 import async_timeout
@@ -56,67 +57,62 @@ class TanDataCoordinator(DataUpdateCoordinator):
                 self._schedules = {}
                 self._last_schedule_date = now.date()
 
-            needed_schedules = set()
-            
             # Identify needed schedules
+            tasks = []
+            keys_to_fetch = []
+
             for passage in data:
                 stop_id = passage.get("arret", {}).get("codeArret")
                 line_num = passage.get("ligne", {}).get("numLigne")
                 direction = passage.get("sens")
                 
                 if stop_id and line_num and direction:
-                    needed_schedules.add((stop_id, line_num, direction))
+                    key = (stop_id, line_num, direction)
+                    if key not in self._schedules:
+                        keys_to_fetch.append(key)
+                        tasks.append(self.api.get_stop_schedule(*key))
 
-            # Fetch missing schedules
-            for key in needed_schedules:
-                if key not in self._schedules:
-                    try:
-                        sched = await self.api.get_stop_schedule(*key)
-                        if sched:
-                            self._schedules[key] = sched
-                    except Exception:
-                        pass
+            # Fetch missing schedules in parallel
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for key, result in zip(keys_to_fetch, results):
+                    if isinstance(result, dict):
+                        self._schedules[key] = result
 
             # Enrich data with traffic info from schedules and prepare for frontend
             final_schedules = {}
             for passage in data:
-                if passage.get("infotrafic"):
-                    stop_id = passage.get("arret", {}).get("codeArret")
-                    line_num = passage.get("ligne", {}).get("numLigne")
-                    direction = passage.get("sens")
-                    key = (stop_id, line_num, direction)
+                stop_id = passage.get("arret", {}).get("codeArret")
+                line_num = passage.get("ligne", {}).get("numLigne")
+                direction = passage.get("sens")
+                key = (stop_id, line_num, direction)
+                
+                # Default values
+                passage["infotrafic"] = False
+                passage["infotrafic_message"] = None
+
+                if key in self._schedules:
+                    sched = self._schedules[key]
                     
-                    if key in self._schedules:
-                        sched = self._schedules[key]
+                    # Traffic info
+                    if passage.get("infotrafic"):
                         msg = sched.get("ligne", {}).get("libelleTrafic")
-                        
                         if msg:
                             passage["infotrafic_message"] = msg
                             passage["infotrafic_type"] = "alert"
-                        else:
-                            # Ignore static notes (e.g. "Vendredi seulement") to avoid confusing icons
-                            passage["infotrafic"] = False
-                            passage["infotrafic_message"] = None
-
-            # Prepare schedules for frontend (filter empty and add direction label)
-            for key in needed_schedules:
-                if key in self._schedules:
-                    sched = self._schedules[key]
-                    # Skip lines without schedules (e.g. special shuttles NN, NO, NS)
-                    if not sched.get("horaires"):
-                        continue
-                        
-                    # Create a shallow copy to inject direction label
-                    sched_data = sched.copy()
-                    direction = key[2] # 1 or 2
-                    dir_key = f"directionSens{direction}"
                     
-                    if "ligne" in sched_data and dir_key in sched_data["ligne"]:
-                        sched_data["direction_label"] = sched_data["ligne"][dir_key]
-                    else:
-                        sched_data["direction_label"] = f"Sens {direction}"
+                    # Prepare schedule for frontend
+                    if sched.get("horaires"):
+                        # Create a shallow copy to inject direction label
+                        sched_data = sched.copy()
+                        dir_key = f"directionSens{direction}"
                         
-                    final_schedules[f"{key[1]}-{key[2]}"] = sched_data
+                        if "ligne" in sched_data and dir_key in sched_data["ligne"]:
+                            sched_data["direction_label"] = sched_data["ligne"][dir_key]
+                        else:
+                            sched_data["direction_label"] = f"Sens {direction}"
+                            
+                        final_schedules[f"{line_num}-{direction}"] = sched_data
 
             return {
                 "passages": data,

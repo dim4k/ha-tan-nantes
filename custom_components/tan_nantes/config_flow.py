@@ -12,9 +12,9 @@ class TanConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict | None = None):
         """Handle the initial step (user input)."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             lat = user_input["latitude"]
@@ -43,6 +43,7 @@ class TanConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         }
                     )
             except Exception:
+                _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
         # Form displayed to the user
