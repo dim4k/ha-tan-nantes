@@ -2,8 +2,12 @@
 
 DOMAIN = "tan_nantes"
 
+# Configuration Keys
+CONF_STOP_CODE = "stop_code"
+CONF_STOP_LABEL = "stop_label"
+
 # URL to find stops (Latitude/Longitude)
-URL_ARRETS = "http://open.tan.fr/ewp/arrets.json/{}/{}" 
+URL_STOPS = "http://open.tan.fr/ewp/arrets.json/{}/{}" 
 
 # URL for waiting time (CodeLieu)
-URL_TEMPS_ATTENTE = "http://open.tan.fr/ewp/tempsattente.json/{}"
+URL_WAITING_TIME = "http://open.tan.fr/ewp/tempsattente.json/{}"

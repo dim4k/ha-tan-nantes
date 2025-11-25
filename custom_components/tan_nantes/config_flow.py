@@ -1,8 +1,9 @@
 import logging
 import voluptuous as vol
-import aiohttp
 from homeassistant import config_entries
-from .const import DOMAIN, URL_STOPS
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from .const import DOMAIN, CONF_STOP_CODE, CONF_STOP_LABEL
+from .api import TanApiClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,31 +22,26 @@ class TanConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Verify coordinates via the API
             try:
-                url = URL_STOPS.format(lat, lon)
+                session = async_get_clientsession(self.hass)
+                client = TanApiClient(session)
+                stops = await client.get_stops(lat, lon)
                 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as response:
-                        if response.status != 200:
-                            errors["base"] = "cannot_connect"
-                        else:
-                            stops = await response.json()
-                            
-                            if not stops:
-                                errors["base"] = "no_stops_found"
-                            else:
-                                # Take the first stop (the closest one)
-                                closest_stop = stops[0]
-                                stop_code = closest_stop["codeLieu"]
-                                stop_label = closest_stop["libelle"]
+                if not stops:
+                    errors["base"] = "no_stops_found"
+                else:
+                    # Take the first stop (the closest one)
+                    closest_stop = stops[0]
+                    stop_code = closest_stop["codeLieu"]
+                    stop_label = closest_stop["libelle"]
 
-                                # Create the configuration entry stored in HA
-                                return self.async_create_entry(
-                                    title=f"Stop: {stop_label}",
-                                    data={
-                                        "stop_code": stop_code,
-                                        "stop_label": stop_label
-                                    }
-                                )
+                    # Create the configuration entry stored in HA
+                    return self.async_create_entry(
+                        title=f"Stop: {stop_label}",
+                        data={
+                            CONF_STOP_CODE: stop_code,
+                            CONF_STOP_LABEL: stop_label
+                        }
+                    )
             except Exception:
                 errors["base"] = "unknown"
 

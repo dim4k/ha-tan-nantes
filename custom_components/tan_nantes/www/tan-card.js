@@ -21,9 +21,6 @@ class TanNantesCard extends HTMLElement {
         if (!state || (this._state && this._state === state)) return;
         this._state = state;
 
-        const attributes = state.attributes;
-        const departures = attributes.next_departures || [];
-
         if (!this.content) {
             this.attachShadow({ mode: "open" });
             this.shadowRoot.innerHTML = `
@@ -70,45 +67,48 @@ class TanNantesCard extends HTMLElement {
                 state.attributes.friendly_name || "Arrêt Tan";
         }
 
+        this._render(state.attributes.next_departures || []);
+    }
+
+    _render(departures) {
         let html = "";
-
-        // Helper function to generate rows
-        const renderRows = (direction) => {
-            const busDirection = departures.filter(
-                (p) => p.direction === direction && p.time
-            );
-            if (busDirection.length === 0)
-                return `<div class="no-bus">No departure</div>`;
-
-            return busDirection
-                .map((bus) => {
-                    const isWarning =
-                        bus.time.includes("2mn") || bus.time.includes("3mn");
-                    const isUrgent =
-                        bus.time.includes("proche") || bus.time.includes("1mn");
-                    return `
-          <div class="row">
-            <div class="badge">${bus.line}</div>
-            <div class="dest">${bus.destination}</div>
-            <div class="time ${
-                isUrgent ? "urgent" : isWarning ? "warning" : ""
-            }">${bus.time}</div>
-          </div>
-        `;
-                })
-                .join("");
-        };
 
         if (departures.length > 0) {
             html += `<div class="direction-header">Direction 1</div>`;
-            html += renderRows(1);
+            html += this._renderRows(departures, 1);
             html += `<div class="direction-header">Direction 2</div>`;
-            html += renderRows(2);
+            html += this._renderRows(departures, 2);
         } else {
             html = `<div class="no-bus" style="text-align:center;">Loading...</div>`;
         }
 
         this.content.innerHTML = html;
+    }
+
+    _renderRows(departures, direction) {
+        const busDirection = departures.filter(
+            (p) => p.direction === direction && p.time
+        );
+        if (busDirection.length === 0)
+            return `<div class="no-bus">No departure</div>`;
+
+        return busDirection
+            .map((bus) => {
+                // Regex to avoid false positives (e.g. "12mn" matching "2mn")
+                const isWarning = /(^|\D)[23]mn/.test(bus.time);
+                const isUrgent =
+                    bus.time.includes("proche") || /(^|\D)1mn/.test(bus.time);
+                return `
+      <div class="row">
+        <div class="badge">${bus.line}</div>
+        <div class="dest">${bus.destination}</div>
+        <div class="time ${isUrgent ? "urgent" : isWarning ? "warning" : ""}">${
+                    bus.time
+                }</div>
+      </div>
+    `;
+            })
+            .join("");
     }
 
     getCardSize() {

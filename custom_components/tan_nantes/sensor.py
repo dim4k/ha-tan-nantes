@@ -1,19 +1,20 @@
 from datetime import timedelta
 import logging
-import aiohttp
 import async_timeout
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN, URL_WAITING_TIME
+from .const import DOMAIN, CONF_STOP_CODE, CONF_STOP_LABEL
+from .api import TanApiClient
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the sensors based on the config entry."""
-    stop_code = entry.data["stop_code"]
-    stop_name = entry.data["stop_label"]
+    stop_code = entry.data[CONF_STOP_CODE]
+    stop_name = entry.data[CONF_STOP_LABEL]
 
     # Coordinator to manage updates (every 60s)
     coordinator = TanDataCoordinator(hass, stop_code)
@@ -33,17 +34,17 @@ class TanDataCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=60),
         )
         self.stop_code = stop_code
+        self.api = TanApiClient(async_get_clientsession(hass))
 
     async def _async_update_data(self):
         """Retrieve data from the Tan API."""
-        url = URL_WAITING_TIME.format(self.stop_code)
-        
-        async with async_timeout.timeout(10):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        raise UpdateFailed(f"Erreur API: {response.status}")
-                    return await response.json()
+        try:
+            data = await self.api.get_waiting_time(self.stop_code)
+            if data is None:
+                raise UpdateFailed("Error fetching data from Tan API")
+            return data
+        except Exception as err:
+            raise UpdateFailed(f"Error communicating with API: {err}")
 
 class TanSensor(SensorEntity):
     """Represent the next bus at the stop."""
