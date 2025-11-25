@@ -42,10 +42,12 @@ class TanNantesCard extends HTMLElement {
             padding: 4px 8px; border-radius: 6px; min-width: 25px; text-align: center;
             margin-right: 12px; font-size: 1.1em; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
           }
+          .mode-icon { color: var(--secondary-text-color); margin-right: 8px; --mdc-icon-size: 20px; }
           .dest { flex-grow: 1; font-size: 1.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
           .time { font-weight: bold; font-size: 1.1em; padding: 4px 8px; border-radius: 4px; white-space: nowrap; background: rgba(127,127,127,0.1); color: var(--primary-text-color); }
           .urgent { background-color: rgba(231, 76, 60, 0.2); color: #e74c3c; }
           .warning { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; }
+          .traffic-warning { color: #f39c12; margin-left: 5px; vertical-align: middle; }
           .no-bus { padding: 10px 16px; font-style: italic; color: var(--secondary-text-color); }
           ha-card { padding-bottom: 10px; }
         </style>
@@ -95,13 +97,21 @@ class TanNantesCard extends HTMLElement {
         return busDirection
             .map((bus) => {
                 // Regex to avoid false positives (e.g. "12mn" matching "2mn")
-                const isWarning = /(^|\D)[23]mn/.test(bus.time);
+                // Handles "mn" and "'" as per documentation
+                const isWarning = /(^|\D)[23](mn|')/.test(bus.time);
                 const isUrgent =
-                    bus.time.includes("proche") || /(^|\D)1mn/.test(bus.time);
+                    bus.time.includes("proche") || /(^|\D)1(mn|')/.test(bus.time);
+                const isTraffic = bus.traffic_info;
+                const icon = this._getIconForType(bus.type);
+                
                 return `
       <div class="row">
-        <div class="badge">${bus.line}</div>
-        <div class="dest">${bus.destination}</div>
+        <ha-icon icon="${icon}" class="mode-icon"></ha-icon>
+        <div class="badge type-${bus.type}">${bus.line}</div>
+        <div class="dest">
+            ${bus.destination}
+            ${isTraffic ? '<ha-icon icon="mdi:alert-circle" class="traffic-warning" title="Info Trafic"></ha-icon>' : ''}
+        </div>
         <div class="time ${isUrgent ? "urgent" : isWarning ? "warning" : ""}">${
                     bus.time
                 }</div>
@@ -109,6 +119,16 @@ class TanNantesCard extends HTMLElement {
     `;
             })
             .join("");
+    }
+
+    _getIconForType(type) {
+        switch (type) {
+            case 1: return "mdi:tram";
+            case 2: return "mdi:bus-articulated-front"; // Busway
+            case 3: return "mdi:bus";
+            case 4: return "mdi:ferry"; // Navibus
+            default: return "mdi:bus";
+        }
     }
 
     getCardSize() {

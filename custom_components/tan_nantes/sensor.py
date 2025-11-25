@@ -81,9 +81,11 @@ class TanSensor(SensorEntity):
             line_info = passage.get("ligne", {})
             next_buses.append({
                 "line": line_info.get("numLigne"),
+                "type": line_info.get("typeLigne"),
                 "destination": passage.get("terminus"),
                 "time": passage.get("temps"),
-                "direction": passage.get("sens")
+                "direction": passage.get("sens"),
+                "traffic_info": passage.get("infotrafic")
             })
             
         return {"next_departures": next_buses}
