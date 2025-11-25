@@ -48,6 +48,7 @@ class TanNantesCard extends HTMLElement {
           .dest { flex-grow: 1; font-size: 1.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
           .time { font-weight: bold; font-size: 1.1em; padding: 4px 8px; border-radius: 4px; white-space: nowrap; background: rgba(127,127,127,0.1); color: var(--primary-text-color); }
           .urgent { background-color: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+          .warning { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; }
           .no-bus { padding: 10px 16px; font-style: italic; color: var(--secondary-text-color); }
           ha-card { padding-bottom: 10px; }
         </style>
