@@ -89,9 +89,14 @@ class TanDataCoordinator(DataUpdateCoordinator):
                     if key in self._schedules:
                         sched = self._schedules[key]
                         msg = sched.get("ligne", {}).get("libelleTrafic")
-                        if not msg and sched.get("notes"):
-                            msg = ", ".join([n.get("libelle") for n in sched.get("notes") if n.get("libelle")])
-                        passage["infotrafic_message"] = msg
+                        
+                        if msg:
+                            passage["infotrafic_message"] = msg
+                            passage["infotrafic_type"] = "alert"
+                        else:
+                            # Ignore static notes (e.g. "Vendredi seulement") to avoid confusing icons
+                            passage["infotrafic"] = False
+                            passage["infotrafic_message"] = None
 
             # Prepare schedules for frontend (filter empty and add direction label)
             for key in needed_schedules:
@@ -160,7 +165,8 @@ class TanSensor(SensorEntity):
                 "time": passage.get("temps"),
                 "direction": passage.get("sens"),
                 "traffic_info": passage.get("infotrafic"),
-                "traffic_message": passage.get("infotrafic_message")
+                "traffic_message": passage.get("infotrafic_message"),
+                "traffic_type": passage.get("infotrafic_type", "alert")
             })
             
         return {
