@@ -4,7 +4,7 @@ A custom integration for Home Assistant that displays upcoming bus and tram depa
 
 This integration includes a native **Custom Lovelace Card**, requiring no complex configuration.
 
-![Tan Nantes Card](https://github.com/dim4k/tan_nantes/blob/main/screenshot.png?raw=true)
+![Tan Nantes Card](https://github.com/dim4k/ha-tan-nantes/blob/main/screenshot.png?raw=true)
 
 ## ✨ Features
 
