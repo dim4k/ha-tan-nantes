@@ -35,8 +35,8 @@ class TanConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             else:
                                 # Take the first stop (the closest one)
                                 closest_stop = stops[0]
-                                stop_code = closest_stop["codeLieu"] # Field defined p.5
-                                stop_label = closest_stop["libelle"]     # Field defined p.5
+                                stop_code = closest_stop["codeLieu"]
+                                stop_label = closest_stop["libelle"]
 
                                 # Create the configuration entry stored in HA
                                 return self.async_create_entry(
