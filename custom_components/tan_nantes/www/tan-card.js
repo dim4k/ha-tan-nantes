@@ -4,7 +4,7 @@ class TanNantesCard extends HTMLElement {
             eid.startsWith("sensor.tan_next_")
         );
         return {
-            entity: entity || "sensor.tan_next_commerce",
+            entity: entity || "",
         };
     }
 
@@ -13,23 +13,31 @@ class TanNantesCard extends HTMLElement {
     }
 
     setConfig(config) {
-        if (!config.entity) throw new Error("You must define an entity");
         this.config = config;
     }
 
     set hass(hass) {
         const entityId = this.config.entity;
+
+        if (!this.content) this._initShadowDom();
+
+        if (!entityId) {
+            this.content.innerHTML = `<div class="no-bus" style="padding: 16px;">No Tan Nantes entities found. Please add the integration via Settings > Devices & Services.</div>`;
+            return;
+        }
+
         const state = hass.states[entityId];
 
-        if (!state) return;
+        if (!state) {
+            this.content.innerHTML = `<div class="no-bus">Entity not found: ${entityId}</div>`;
+            return;
+        }
 
         // Check if state changed to trigger re-render or data fetch
         if (this._state && this._state.last_updated === state.last_updated)
             return;
 
         this._state = state;
-
-        if (!this.content) this._initShadowDom();
 
         this._updateTitle(state.attributes.friendly_name);
 
