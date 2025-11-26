@@ -106,12 +106,18 @@ class TanDataCoordinator(DataUpdateCoordinator):
                     
                     # Prepare schedule for frontend
                     if sched.get("horaires"):
-                        # Create a shallow copy to inject direction label
-                        sched_data = sched.copy()
-                        dir_key = f"directionSens{direction}"
+                        # Only keep necessary data to reduce attribute size
+                        sched_data = {
+                            "horaires": sched.get("horaires"),
+                            "ligne": {
+                                "numLigne": sched.get("ligne", {}).get("numLigne"),
+                                "direction": sched.get("ligne", {}).get("direction")
+                            }
+                        }
                         
-                        if "ligne" in sched_data and dir_key in sched_data["ligne"]:
-                            sched_data["direction_label"] = sched_data["ligne"][dir_key]
+                        dir_key = f"directionSens{direction}"
+                        if "ligne" in sched and dir_key in sched["ligne"]:
+                            sched_data["direction_label"] = sched["ligne"][dir_key]
                         else:
                             sched_data["direction_label"] = f"Sens {direction}"
                             
