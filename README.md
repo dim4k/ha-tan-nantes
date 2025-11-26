@@ -40,3 +40,8 @@ To add the card to your dashboard, you can add it to your dashboard using the vi
 2.  Click **'Add Card'** (or the '+' icon).
 3.  Search for and select the **'Tan Nantes'** card.
 4.  The card will appear with a sample entity ID (`sensor.tan_next_commerce`). In the code editor, **update the `entity:` field** with the name of the sensor created for your stop (e.g., `sensor.tan_next_gare_de_l_etat`).
+
+## 📚 API
+
+This integration relies on the **Tan Open Data API**.
+You can find the official documentation here: [https://open.tan.fr/doc/openapi](https://open.tan.fr/doc/openapi)
