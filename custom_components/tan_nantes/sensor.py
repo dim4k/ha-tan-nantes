@@ -4,7 +4,7 @@ import logging
 import async_timeout
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, CoordinatorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, CONF_STOP_CODE, CONF_STOP_LABEL
@@ -35,7 +35,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Create a main sensor
     async_add_entities([
         TanNextDeparturesSensor(coordinator, stop_name),
-        TanScheduleSensor(coordinator, stop_name)
     ], True)
 
 class TanDataCoordinator(DataUpdateCoordinator):
@@ -157,11 +156,11 @@ class TanDataCoordinator(DataUpdateCoordinator):
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
 
-class TanNextDeparturesSensor(SensorEntity):
+class TanNextDeparturesSensor(CoordinatorEntity, SensorEntity):
     """Represent the next bus at the stop."""
 
     def __init__(self, coordinator, stop_name):
-        self.coordinator = coordinator
+        super().__init__(coordinator)
         self._stop_name = stop_name
         self._attr_unique_id = f"tan_{coordinator.stop_code}_next"
         self._attr_name = f"Tan Next - {stop_name}"
@@ -183,39 +182,3 @@ class TanNextDeparturesSensor(SensorEntity):
         return {
             "stop_code": self.coordinator.stop_code
         }
-
-    async def async_update(self):
-        """Update via the coordinator."""
-        await self.coordinator.async_request_refresh()
-
-class TanScheduleSensor(SensorEntity):
-    """Represent the schedules at the stop."""
-
-    def __init__(self, coordinator, stop_name):
-        self.coordinator = coordinator
-        self._stop_name = stop_name
-        self._attr_unique_id = f"tan_{coordinator.stop_code}_schedules"
-        self._attr_name = f"Tan Schedules - {stop_name}"
-        self._attr_icon = "mdi:timetable"
-
-    @property
-    def native_value(self):
-        """Return the number of schedules available."""
-        data = self.coordinator.data
-        schedules = data.get("schedules", {}) if data else {}
-        return len(schedules)
-
-    @property
-    def extra_state_attributes(self):
-        """Return schedules as attributes."""
-        data = self.coordinator.data
-        if not data:
-            return {}
-        
-        return {
-            "schedules": data.get("schedules", {})
-        }
-
-    async def async_update(self):
-        """Update via the coordinator."""
-        await self.coordinator.async_request_refresh()

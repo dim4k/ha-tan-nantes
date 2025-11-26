@@ -1,8 +1,15 @@
 class TanNantesCard extends HTMLElement {
-    static getStubConfig() {
+    static getStubConfig(hass, entities, entitiesFallback) {
+        const entity = Object.keys(hass.states).find((eid) =>
+            eid.startsWith("sensor.tan_next_")
+        );
         return {
-            entity: "sensor.tan_next_commerce",
+            entity: entity || "sensor.tan_next_commerce",
         };
+    }
+
+    static getConfigElement() {
+        return document.createElement("tan-nantes-card-editor");
     }
 
     setConfig(config) {
@@ -352,6 +359,58 @@ class TanNantesCard extends HTMLElement {
 }
 
 customElements.define("tan-nantes-card", TanNantesCard);
+
+class TanNantesCardEditor extends HTMLElement {
+    setConfig(config) {
+        this._config = config;
+    }
+
+    set hass(hass) {
+        this._hass = hass;
+        if (!this.content) {
+            this._init();
+        }
+    }
+
+    _init() {
+        this.content = document.createElement("div");
+        this.content.innerHTML = `
+            <div class="card-config">
+                <ha-entity-picker
+                    label="Entité (sensor.tan_next_...)"
+                    domain-filter="sensor"
+                    include-domains='["sensor"]'
+                ></ha-entity-picker>
+            </div>
+        `;
+        this.appendChild(this.content);
+
+        const picker = this.content.querySelector("ha-entity-picker");
+        picker.hass = this._hass;
+        picker.value = this._config.entity;
+        picker.addEventListener("change", this._valueChanged.bind(this));
+    }
+
+    _valueChanged(ev) {
+        if (!this._config || !this._hass) return;
+        const target = ev.target;
+        if (this._config.entity === target.value) return;
+
+        this._config = {
+            ...this._config,
+            entity: target.value,
+        };
+
+        const event = new CustomEvent("config-changed", {
+            detail: { config: this._config },
+            bubbles: true,
+            composed: true,
+        });
+        this.dispatchEvent(event);
+    }
+}
+
+customElements.define("tan-nantes-card-editor", TanNantesCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
