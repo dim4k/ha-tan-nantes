@@ -17,7 +17,17 @@ class TanNantesCard extends HTMLElement {
     }
 
     set hass(hass) {
-        const entityId = this.config.entity;
+        let entityId = this.config.entity;
+
+        // Fallback: try to find an entity if none is configured
+        if (!entityId) {
+            const found = Object.keys(hass.states).find((eid) =>
+                eid.startsWith("sensor.tan_next_")
+            );
+            if (found) {
+                entityId = found;
+            }
+        }
 
         if (!this.content) this._initShadowDom();
 
@@ -34,7 +44,11 @@ class TanNantesCard extends HTMLElement {
         }
 
         // Check if state changed to trigger re-render or data fetch
-        if (this._state && this._state.last_updated === state.last_updated)
+        if (
+            this._state &&
+            this._state.last_updated === state.last_updated &&
+            this._state.entity_id === entityId
+        )
             return;
 
         this._state = state;
@@ -44,6 +58,15 @@ class TanNantesCard extends HTMLElement {
         // Fetch data via WebSocket
         const stopCode = state.attributes.stop_code;
         if (stopCode) {
+            // Show loading if we are switching entities or recovering from error
+            if (
+                !this._data ||
+                this.content.innerHTML.includes("No Tan Nantes") ||
+                this.content.innerHTML.includes("Entity not found")
+            ) {
+                this.content.innerHTML = `<div class="no-bus">Chargement...</div>`;
+            }
+
             hass.callWS({
                 type: "tan_nantes/get_data",
                 stop_code: stopCode,
@@ -60,7 +83,6 @@ class TanNantesCard extends HTMLElement {
             this.content.innerHTML = `<div class="no-bus">Entité non configurée (stop_code manquant)</div>`;
         }
     }
-
     _initShadowDom() {
         this.attachShadow({ mode: "open" });
         this.shadowRoot.innerHTML = `
