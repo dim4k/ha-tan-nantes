@@ -212,7 +212,26 @@ class TanNantesCard extends HTMLElement {
 
                 let timesHtml = "";
                 if (data.horaires) {
-                    timesHtml = data.horaires
+                    let horairesList = [];
+                    if (Array.isArray(data.horaires)) {
+                        horairesList = data.horaires;
+                    } else {
+                        // Convert object back to array for sorting/mapping
+                        horairesList = Object.keys(data.horaires).map((h) => ({
+                            heure: h,
+                            passages: data.horaires[h],
+                        }));
+                        // Sort by hour (handling 00, 01 as after 23)
+                        horairesList.sort((a, b) => {
+                            let hA = parseInt(a.heure);
+                            let hB = parseInt(b.heure);
+                            if (hA < 4) hA += 24;
+                            if (hB < 4) hB += 24;
+                            return hA - hB;
+                        });
+                    }
+
+                    timesHtml = horairesList
                         .map(
                             (h) => `
                     <div class="schedule-item">

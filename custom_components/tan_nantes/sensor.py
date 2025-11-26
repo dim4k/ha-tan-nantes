@@ -106,9 +106,15 @@ class TanDataCoordinator(DataUpdateCoordinator):
                     
                     # Prepare schedule for frontend
                     if sched.get("horaires"):
-                        # Only keep necessary data to reduce attribute size
+                        # Compress horaires to { "HH": ["mm", "mm"] } to save space
+                        # This significantly reduces JSON size compared to list of dicts with repeated keys
+                        compressed_horaires = {}
+                        for h in sched.get("horaires", []):
+                            if "heure" in h and "passages" in h:
+                                compressed_horaires[h["heure"]] = h["passages"]
+
                         sched_data = {
-                            "horaires": sched.get("horaires"),
+                            "horaires": compressed_horaires,
                             "ligne": {
                                 "numLigne": sched.get("ligne", {}).get("numLigne"),
                                 "direction": sched.get("ligne", {}).get("direction")
