@@ -363,6 +363,10 @@ customElements.define("tan-nantes-card", TanNantesCard);
 class TanNantesCardEditor extends HTMLElement {
     setConfig(config) {
         this._config = config;
+        if (this.content) {
+            const picker = this.content.querySelector("ha-entity-picker");
+            if (picker) picker.value = config.entity;
+        }
     }
 
     set hass(hass) {
@@ -387,14 +391,16 @@ class TanNantesCardEditor extends HTMLElement {
 
         const picker = this.content.querySelector("ha-entity-picker");
         picker.hass = this._hass;
-        picker.value = this._config.entity;
+        if (this._config) {
+            picker.value = this._config.entity;
+        }
         picker.addEventListener("change", this._valueChanged.bind(this));
     }
 
     _valueChanged(ev) {
-        if (!this._config || !this._hass) return;
+        if (!this._hass) return;
         const target = ev.target;
-        if (this._config.entity === target.value) return;
+        if (this._config && this._config.entity === target.value) return;
 
         this._config = {
             ...this._config,
