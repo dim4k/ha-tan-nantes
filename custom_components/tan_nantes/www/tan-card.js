@@ -2,7 +2,6 @@ class TanNantesCard extends HTMLElement {
     static getStubConfig() {
         return {
             entity: "sensor.tan_next_commerce",
-            schedule_entity: "sensor.tan_schedules_commerce",
         };
     }
 
@@ -15,27 +14,36 @@ class TanNantesCard extends HTMLElement {
         const entityId = this.config.entity;
         const state = hass.states[entityId];
 
-        // Try to find schedule entity
-        let scheduleEntityId = this.config.schedule_entity;
-        if (!scheduleEntityId && entityId.includes("_next")) {
-            scheduleEntityId = entityId.replace("_next", "_schedules");
-        }
-        const scheduleState =
-            scheduleEntityId && hass.states[scheduleEntityId]
-                ? hass.states[scheduleEntityId]
-                : state;
-
         if (!state) return;
-        if (this._state === state && this._scheduleState === scheduleState)
+
+        // Check if state changed to trigger re-render or data fetch
+        if (this._state && this._state.last_updated === state.last_updated)
             return;
 
         this._state = state;
-        this._scheduleState = scheduleState;
 
         if (!this.content) this._initShadowDom();
 
         this._updateTitle(state.attributes.friendly_name);
-        this._render();
+
+        // Fetch data via WebSocket
+        const stopCode = state.attributes.stop_code;
+        if (stopCode) {
+            hass.callWS({
+                type: "tan_nantes/get_data",
+                stop_code: stopCode,
+            })
+                .then((data) => {
+                    this._data = data;
+                    this._render();
+                })
+                .catch((err) => {
+                    console.error("Error fetching Tan data:", err);
+                    this.content.innerHTML = `<div class="no-bus">Erreur de chargement: ${err.message}</div>`;
+                });
+        } else {
+            this.content.innerHTML = `<div class="no-bus">Entité non configurée (stop_code manquant)</div>`;
+        }
     }
 
     _initShadowDom() {
@@ -71,19 +79,19 @@ class TanNantesCard extends HTMLElement {
     }
 
     _render() {
-        const attrs = this._state.attributes;
-        const scheduleAttrs = this._scheduleState
-            ? this._scheduleState.attributes
-            : attrs;
+        if (!this._data) {
+            this.content.innerHTML = `<div class="no-bus">Chargement...</div>`;
+            return;
+        }
 
         if (this._showSchedule) {
             this.content.innerHTML = this._renderSchedule(
-                scheduleAttrs.schedules || {}
+                this._data.schedules || {}
             );
         } else {
             this.content.innerHTML = this._renderDepartures(
-                attrs.next_departures || [],
-                attrs.stop_code
+                this._data.next_departures || [],
+                this._state.attributes.stop_code
             );
         }
     }

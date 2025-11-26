@@ -24,6 +24,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Coordinator to manage updates (every 60s)
     coordinator = TanDataCoordinator(hass, stop_code)
+    
+    # Register coordinator for WS access
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault("coordinators", {})
+    hass.data[DOMAIN]["coordinators"][stop_code] = coordinator
+    
     await coordinator.async_config_entry_first_refresh()
 
     # Create a main sensor
@@ -84,6 +90,8 @@ class TanDataCoordinator(DataUpdateCoordinator):
 
             # Enrich data with traffic info from schedules and prepare for frontend
             final_schedules = {}
+            next_departures = []
+            
             for passage in data:
                 stop_id = passage.get("arret", {}).get("codeArret")
                 line_num = passage.get("ligne", {}).get("numLigne")
@@ -129,8 +137,21 @@ class TanDataCoordinator(DataUpdateCoordinator):
                             
                         final_schedules[f"{line_num}-{direction}"] = sched_data
 
+                # Prepare next departures
+                line_info = passage.get("ligne", {})
+                next_departures.append({
+                    "line": line_info.get("numLigne"),
+                    "type": line_info.get("typeLigne"),
+                    "destination": passage.get("terminus"),
+                    "time": passage.get("temps"),
+                    "direction": passage.get("sens"),
+                    "traffic_info": passage.get("infotrafic"),
+                    "traffic_message": passage.get("infotrafic_message"),
+                    "traffic_type": passage.get("infotrafic_type", "alert")
+                })
+
             return {
-                "passages": data,
+                "next_departures": next_departures,
                 "schedules": final_schedules
             }
         except Exception as err:
@@ -150,39 +171,17 @@ class TanNextDeparturesSensor(SensorEntity):
     def native_value(self):
         """Return the time of the very first bus."""
         data = self.coordinator.data
-        passages = data.get("passages", []) if data else []
+        passages = data.get("next_departures", []) if data else []
         
         if passages and isinstance(passages, list) and len(passages) > 0:
-            return passages[0].get("temps", "Indisponible")
+            return passages[0].get("time", "Indisponible")
         return "No bus"
 
     @property
     def extra_state_attributes(self):
         """Return all next passages as attributes."""
-        data = self.coordinator.data
-        if not data:
-            return {}
-        
-        passages = data.get("passages", [])
-        schedules = data.get("schedules", {})
-        
-        next_buses = []
-        for passage in passages:
-            line_info = passage.get("ligne", {})
-            next_buses.append({
-                "line": line_info.get("numLigne"),
-                "type": line_info.get("typeLigne"),
-                "destination": passage.get("terminus"),
-                "time": passage.get("temps"),
-                "direction": passage.get("sens"),
-                "traffic_info": passage.get("infotrafic"),
-                "traffic_message": passage.get("infotrafic_message"),
-                "traffic_type": passage.get("infotrafic_type", "alert")
-            })
-            
         return {
-            "stop_code": self.coordinator.stop_code,
-            "next_departures": next_buses,
+            "stop_code": self.coordinator.stop_code
         }
 
     async def async_update(self):
