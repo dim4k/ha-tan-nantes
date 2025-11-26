@@ -1,6 +1,9 @@
 class TanNantesCard extends HTMLElement {
     static getStubConfig() {
-        return { entity: "sensor.tan_next_commerce" };
+        return {
+            entity: "sensor.tan_next_commerce",
+            schedule_entity: "sensor.tan_schedules_commerce",
+        };
     }
 
     setConfig(config) {
@@ -12,8 +15,22 @@ class TanNantesCard extends HTMLElement {
         const entityId = this.config.entity;
         const state = hass.states[entityId];
 
-        if (!state || this._state === state) return;
+        // Try to find schedule entity
+        let scheduleEntityId = this.config.schedule_entity;
+        if (!scheduleEntityId && entityId.includes("_next")) {
+            scheduleEntityId = entityId.replace("_next", "_schedules");
+        }
+        const scheduleState =
+            scheduleEntityId && hass.states[scheduleEntityId]
+                ? hass.states[scheduleEntityId]
+                : state;
+
+        if (!state) return;
+        if (this._state === state && this._scheduleState === scheduleState)
+            return;
+
         this._state = state;
+        this._scheduleState = scheduleState;
 
         if (!this.content) this._initShadowDom();
 
@@ -55,9 +72,13 @@ class TanNantesCard extends HTMLElement {
 
     _render() {
         const attrs = this._state.attributes;
+        const scheduleAttrs = this._scheduleState
+            ? this._scheduleState.attributes
+            : attrs;
+
         if (this._showSchedule) {
             this.content.innerHTML = this._renderSchedule(
-                attrs.schedules || {}
+                scheduleAttrs.schedules || {}
             );
         } else {
             this.content.innerHTML = this._renderDepartures(

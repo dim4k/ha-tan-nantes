@@ -27,7 +27,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
     await coordinator.async_config_entry_first_refresh()
 
     # Create a main sensor
-    async_add_entities([TanSensor(coordinator, stop_name)], True)
+    async_add_entities([
+        TanNextDeparturesSensor(coordinator, stop_name),
+        TanScheduleSensor(coordinator, stop_name)
+    ], True)
 
 class TanDataCoordinator(DataUpdateCoordinator):
     """Manage API data retrieval."""
@@ -121,7 +124,7 @@ class TanDataCoordinator(DataUpdateCoordinator):
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
 
-class TanSensor(SensorEntity):
+class TanNextDeparturesSensor(SensorEntity):
     """Represent the next bus at the stop."""
 
     def __init__(self, coordinator, stop_name):
@@ -168,7 +171,38 @@ class TanSensor(SensorEntity):
         return {
             "stop_code": self.coordinator.stop_code,
             "next_departures": next_buses,
-            "schedules": schedules
+        }
+
+    async def async_update(self):
+        """Update via the coordinator."""
+        await self.coordinator.async_request_refresh()
+
+class TanScheduleSensor(SensorEntity):
+    """Represent the schedules at the stop."""
+
+    def __init__(self, coordinator, stop_name):
+        self.coordinator = coordinator
+        self._stop_name = stop_name
+        self._attr_unique_id = f"tan_{coordinator.stop_code}_schedules"
+        self._attr_name = f"Tan Schedules - {stop_name}"
+        self._attr_icon = "mdi:timetable"
+
+    @property
+    def native_value(self):
+        """Return the number of schedules available."""
+        data = self.coordinator.data
+        schedules = data.get("schedules", {}) if data else {}
+        return len(schedules)
+
+    @property
+    def extra_state_attributes(self):
+        """Return schedules as attributes."""
+        data = self.coordinator.data
+        if not data:
+            return {}
+        
+        return {
+            "schedules": data.get("schedules", {})
         }
 
     async def async_update(self):
