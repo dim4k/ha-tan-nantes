@@ -1,5 +1,6 @@
 class TanNantesCard extends HTMLElement {
     static getStubConfig(hass, entities, entitiesFallback) {
+        // Try to find an entity in the list of states
         const entity = Object.keys(hass.states).find((eid) =>
             eid.startsWith("sensor.tan_next_")
         );
@@ -26,11 +27,12 @@ class TanNantesCard extends HTMLElement {
             );
             if (found) {
                 entityId = found;
+                // Update config to persist the found entity
+                this.config = { ...this.config, entity: entityId };
             }
         }
 
         if (!this.content) this._initShadowDom();
-
         if (!entityId) {
             this.content.innerHTML = `<div class="no-bus" style="padding: 16px;">No Tan Nantes entities found. Please add the integration via Settings > Devices & Services.</div>`;
             return;
