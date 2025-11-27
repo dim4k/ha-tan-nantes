@@ -30,7 +30,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ])
 
         # 2. Inject JS directly into the frontend with version for cache busting
-        add_extra_js_url(hass, f"{url_path}/tan-card.js?v={version}")
+        add_extra_js_url(hass, f"{url_path}/tan-card.js?hacstag={version}")
         
         # 3. Register WebSocket command
         websocket_api.async_register_command(hass, handle_get_data)
@@ -46,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vol.Required("type"): "tan_nantes/get_data",
     vol.Required("stop_code"): str,
 })
-def handle_get_data(hass, connection, msg):
+def handle_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
     """Handle get data command."""
     stop_code = msg["stop_code"]
     coordinator = hass.data[DOMAIN]["coordinators"].get(stop_code)
