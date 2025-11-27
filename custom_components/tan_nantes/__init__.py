@@ -29,8 +29,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         ])
 
-        # 2. Inject JS directly into the frontend with version for cache busting
-        add_extra_js_url(hass, f"{url_path}/tan-card.js?hacstag={version}")
+        # 2. Register the card as a Lovelace resource
+        # This is required for the card to be recognized by the dashboard
+        try:
+            resources = hass.data["lovelace"].resources
+            if not resources.loaded:
+                await resources.async_load()
+            
+            card_url = f"{url_path}/tan-card.js?hacstag={version}"
+            
+            # Check if already registered, update version if needed
+            found = False
+            for resource in resources.async_items():
+                if resource["url"].startswith(url_path):
+                    found = True
+                    if resource["url"] != card_url:
+                        await resources.async_update_item(resource["id"], {"url": card_url})
+                    break
+            
+            if not found:
+                await resources.async_create_item({"res_type": "module", "url": card_url})
+        except Exception:
+            pass
         
         # 3. Register WebSocket command
         websocket_api.async_register_command(hass, handle_get_data)
